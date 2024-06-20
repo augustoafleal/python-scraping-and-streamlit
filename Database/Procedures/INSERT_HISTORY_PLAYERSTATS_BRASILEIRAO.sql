@@ -1,0 +1,180 @@
+CREATE OR REPLACE EDITIONABLE PROCEDURE "FOOTSTATS"."INSERT_HISTORY_PLAYERSTATS_BRASILEIRAO" AS
+
+BEGIN
+	INSERT INTO FOOTSTATS.FOOTSTATS_HISTORY_PLAYERSTATS_BRASILEIRAO (
+		"Hash_ID",
+		"Player",
+		"Nation",
+		"Position",
+		"Squad",
+		"Age",
+		"Birth_Year",
+		"Matches_Played",
+		"Starts",
+		"Minutes_Played",
+		"Minutes_90s",
+		"Goals",
+		"Assists",
+		"Goals_Plus_Assists",
+		"Goals_Excluding_PK",
+		"Penalty_Kicks",
+		"Penalty_Kicks_Attempted",
+		"Yellow_Cards",
+		"Red_Cards",
+		"Expected_Goals",
+		"NonPenalty_Expected_Goals",
+		"Expected_Assists",
+		"NonPenalty_Expected_Goals_Plus_Assists",
+		"Progressive_Carries",
+		"Progressive_Passes",
+		"Progressive_Receptions",
+		"Goals_Per_90_Minutes",
+		"Assists_Per_90_Minutes",
+		"Goals_Plus_Assists_Per_90_Minutes",
+		"Goals_Excluding_PK_Per_90_Minutes",
+		"Goals_Plus_Assists_Excluding_PK",
+		"Expected_Goals_Per_90_Minutes",
+		"Expected_Assists_Per_90_Minutes",
+		"Expected_Goals_Plus_Assists_Per_90_Minutes",
+		"NonPenalty_Expected_Goals_Per_90_Minutes",
+		"NonPenalty_Expected_Goals_Plus_Assists_Per_90_Minutes",
+		"Created_Date"
+	)
+	WITH pre_history AS (
+		SELECT
+			RAWTOHEX(STANDARD_HASH(TO_CHAR("Player") || TO_CHAR("Squad") || TO_CHAR("Pos") || TO_CHAR(CREATED_DATE, 'YYYY-MM-DD'), 'MD5')) AS HASH_ID,
+			"Player" AS Player,
+			"Nation" AS Nation,
+			"Pos" AS Position,
+			"Squad" AS Squad,
+			TO_NUMBER(SUBSTR("Age", 1, 2)) AS Age,
+			TO_NUMBER("Born", '9999') AS Birth_Year,
+			TO_NUMBER("MP", '9999') AS Matches_Played,
+			TO_NUMBER("Starts", '9999') AS Starts,
+			TO_NUMBER("Min", '9999') AS Minutes_Played,
+			TO_NUMBER("90s", '9999.99') AS Minutes_90s,
+			TO_NUMBER("Gls", '9999') AS Goals,
+			TO_NUMBER("Ast", '9999') AS Assists,
+			TO_NUMBER("G+A", '9999') AS Goals_Plus_Assists,
+			TO_NUMBER("G-PK", '9999') AS Goals_Excluding_PK,
+			TO_NUMBER("PK", '9999') AS Penalty_Kicks,
+			TO_NUMBER("PKatt", '9999') AS Penalty_Kicks_Attempted,
+			TO_NUMBER("CrdY", '9999') AS Yellow_Cards,
+			TO_NUMBER("CrdR", '9999') AS Red_Cards,
+			TO_NUMBER("xG", '9999.99') AS Expected_Goals,
+			TO_NUMBER("npxG", '9999.99') AS NonPenalty_Expected_Goals,
+			TO_NUMBER("xAG", '9999.99') AS Expected_Assists,
+			TO_NUMBER("npxG+xAG", '9999.99') AS NonPenalty_Expected_Goals_Plus_Assists,
+			TO_NUMBER("PrgC", '9999') AS Progressive_Carries,
+			TO_NUMBER("PrgP", '9999') AS Progressive_Passes,
+			TO_NUMBER("PrgR", '9999') AS Progressive_Receptions,
+			TO_NUMBER("Gls.1", '9999.99') AS Goals_Per_90_Minutes,
+			TO_NUMBER("Ast.1", '9999.99') AS Assists_Per_90_Minutes,
+			TO_NUMBER("G+A.1", '9999.99') AS Goals_Plus_Assists_Per_90_Minutes,
+			TO_NUMBER("G-PK.1", '9999.99') AS Goals_Excluding_PK_Per_90_Minutes,
+			TO_NUMBER("G+A-PK", '9999.99') AS Goals_Plus_Assists_Excluding_PK,
+			TO_NUMBER("xG.1", '9999.99') AS Expected_Goals_Per_90_Minutes,
+			TO_NUMBER("xAG.1", '9999.99') AS Expected_Assists_Per_90_Minutes,
+			TO_NUMBER("xG+xAG", '9999.99') AS Expected_Goals_Plus_Assists_Per_90_Minutes,
+			TO_NUMBER("npxG.1", '9999.99') AS NonPenalty_Expected_Goals_Per_90_Minutes,
+			TO_NUMBER("npxG+xAG.1", '9999.99') AS NonPenalty_Expected_Goals_Plus_Assists_Per_90_Minutes,
+			CREATED_DATE
+		FROM FOOTSTATS.FOOTSTATS_STAGING_PLAYERSTATS_BRASILEIRAO 
+		WHERE TRUNC(CREATED_DATE) = TRUNC(SYSTIMESTAMP AT TIME ZONE 'UTC')
+		AND "Player" IS NOT NULL
+		AND "Nation" IS NOT NULL
+		AND "Pos" IS NOT NULL
+		AND "Squad" IS NOT NULL
+		AND "Age" IS NOT NULL
+	), pre_history_dedup AS (
+	SELECT
+		HASH_ID,
+		Player,
+		Nation,
+		Position,
+		Squad,
+		Age,
+		Birth_Year,
+		Matches_Played,
+		Starts,
+		Minutes_Played,
+		Minutes_90s,
+		Goals,
+		Assists,
+		Goals_Plus_Assists,
+		Goals_Excluding_PK,
+		Penalty_Kicks,
+		Penalty_Kicks_Attempted,
+		Yellow_Cards,
+		Red_Cards,
+		Expected_Goals,
+		NonPenalty_Expected_Goals,
+		Expected_Assists,
+		NonPenalty_Expected_Goals_Plus_Assists,
+		Progressive_Carries,
+		Progressive_Passes,
+		Progressive_Receptions,
+		Goals_Per_90_Minutes,
+		Assists_Per_90_Minutes,
+		Goals_Plus_Assists_Per_90_Minutes,
+		Goals_Excluding_PK_Per_90_Minutes,
+		Goals_Plus_Assists_Excluding_PK,
+		Expected_Goals_Per_90_Minutes,
+		Expected_Assists_Per_90_Minutes,
+		Expected_Goals_Plus_Assists_Per_90_Minutes,
+		NonPenalty_Expected_Goals_Per_90_Minutes,
+		NonPenalty_Expected_Goals_Plus_Assists_Per_90_Minutes,
+		CREATED_DATE,
+		ROW_NUMBER() OVER (PARTITION BY HASH_ID ORDER BY HASH_ID DESC) AS RN
+	FROM pre_history
+	WHERE NOT EXISTS 
+	(
+		SELECT 1
+		FROM FOOTSTATS.FOOTSTATS_HISTORY_PLAYERSTATS_BRASILEIRAO h
+		WHERE HASH_ID = h."Hash_ID"
+	)
+	)
+	SELECT
+		HASH_ID,
+		Player,
+		Nation,
+		Position,
+		Squad,
+		Age,
+		Birth_Year,
+		Matches_Played,
+		Starts,
+		Minutes_Played,
+		Minutes_90s,
+		Goals,
+		Assists,
+		Goals_Plus_Assists,
+		Goals_Excluding_PK,
+		Penalty_Kicks,
+		Penalty_Kicks_Attempted,
+		Yellow_Cards,
+		Red_Cards,
+		Expected_Goals,
+		NonPenalty_Expected_Goals,
+		Expected_Assists,
+		NonPenalty_Expected_Goals_Plus_Assists,
+		Progressive_Carries,
+		Progressive_Passes,
+		Progressive_Receptions,
+		Goals_Per_90_Minutes,
+		Assists_Per_90_Minutes,
+		Goals_Plus_Assists_Per_90_Minutes,
+		Goals_Excluding_PK_Per_90_Minutes,
+		Goals_Plus_Assists_Excluding_PK,
+		Expected_Goals_Per_90_Minutes,
+		Expected_Assists_Per_90_Minutes,
+		Expected_Goals_Plus_Assists_Per_90_Minutes,
+		NonPenalty_Expected_Goals_Per_90_Minutes,
+		NonPenalty_Expected_Goals_Plus_Assists_Per_90_Minutes,
+		CREATED_DATE
+	FROM pre_history_dedup
+	WHERE RN = 1;
+
+END;
+
+/
